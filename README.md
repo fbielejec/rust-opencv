@@ -4,8 +4,8 @@ A primer on using [OpenCV](https://opencv.org/opencv-4-0/) with [Rust](https://w
 
 ## Doumentation
 
-- [Rust bindigns for OpenCV - repository and examples](https://github.com/twistedfall/opencv-rust/)
-- [Rust bindigns for OpenCV - documentation](https://docs.rs/opencv/0.33.0/opencv/)
+- [Rust bindings for OpenCV - repository and examples](https://github.com/twistedfall/opencv-rust/)
+- [Rust bindings for OpenCV - documentation](https://docs.rs/opencv/0.33.0/opencv/)
 - [OpenCV C++ documentation](https://docs.opencv.org/master/)
 
 ## Development

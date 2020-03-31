@@ -11,9 +11,6 @@ use opencv::{
     imgcodecs
 };
 
-// https://docs.opencv.org/master/d6/d6d/tutorial_mat_the_basic_image_container.html
-// https://github.com/twistedfall/opencv-rust/blob/master/tests/mat.rs
-
 fn hello_opencv() -> opencv::Result<()> {
     let image = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_GRAYSCALE).unwrap();
     highgui::named_window("hello opencv!", 0).unwrap();
@@ -48,7 +45,11 @@ fn mat () -> opencv::Result<()> {
     let row = m.at_2d::<Vec3b>(0, 0)?;
     println!("{:#?}", row);
 
-    // literal
+    let points = m.at::<Vec3b>(0)?;
+    println!("- POINTS - {:#?}", points);
+    println!("- POINT - {:#?}", points [0]);
+
+    // construct Mat using a literal
     let mut mat = Mat::from_slice_2d(&[
         &[ 1,  2,  3,  4],
         &[ 5,  6,  7,  8],
@@ -56,13 +57,46 @@ fn mat () -> opencv::Result<()> {
         &[13, 14, 15, 16u8],
     ])?;
 
-    println!("{:#?}", m);
+    // println!("DATA : {:#?}", mat.data ().unwrap ());
+
 
     Ok(())
 }
 
-// https://docs.opencv.org/master/db/da5/tutorial_how_to_scan_images.html
+/*
+ * Demonstrates how to scan and reduce an image
+ * https://docs.opencv.org/master/db/da5/tutorial_how_to_scan_images.html
+ * https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
+ */
+// TODO : reduce w. the table
 fn scan_images () -> opencv::Result<()> {
+
+    fn scan_image_and_reduce (m : &mut Mat, table : [u8; 256] ) -> &Mat {
+        if (m.depth ().unwrap () != u8::depth()) {
+            panic!("Only char type matrices!");
+        }
+
+        let channels = m.channels ().unwrap ();
+        let mut n_rows = m.rows ();
+        let mut n_cols = m.cols ();
+
+        if m.is_continuous ().unwrap () {
+            n_cols *= n_rows;
+            n_rows = 1;
+
+        }
+
+        let points = m.at_mut::<Vec3b>(0).unwrap ();
+        println!("{:#?}", points [0]);
+        // points [0] = 121;
+        // println!("{:#?}", points [0]);
+
+
+
+        m
+    }
+
+    let divide_with: u8 = 10;
 
     // println!("{} {}", imgcodecs::IMREAD_COLOR, imgcodecs::IMREAD_GRAYSCALE);
 
@@ -74,13 +108,16 @@ fn scan_images () -> opencv::Result<()> {
     let row = image.at_2d::<Vec3b>(0, 0)?;
     println!("{:#?}", row);
 
-    // TODO create a lookup table
+    // create a lookup table
+    let mut table: [u8; 256] = [0; 256];
+    (0..256).for_each (|i: usize| {
+        table [i] = divide_with * (i as u8 / divide_with);
+    });
 
-    // uchar table[256];
-    // for (int i = 0; i < 256; ++i)
-    //     table[i] = (uchar)(divideWith * (i/divideWith));
+    println!("{} {}", table [0], table [255]);
 
-
+    let mut image_clone: Mat = image.clone()?;
+    let image_reduced = scan_image_and_reduce(&mut image_clone, table);
 
 
     Ok(())

@@ -83,14 +83,29 @@ fn scan_images () -> opencv::Result<()> {
         if m.is_continuous ().unwrap () {
             n_cols *= n_rows;
             n_rows = 1;
-
         }
 
-        let points = m.at_mut::<Vec3b>(0).unwrap ();
-        println!("{:#?}", points [0]);
+        // continuous matrix can be accessed by col number:
+        // let pixel = m.at_mut::<Vec3b>(262143).unwrap ();
+
+        // or by row, col:
+        let pixel = m.at_2d::<Vec3b>(511, 511).unwrap ();
+
+        println!("rows: {} cols: {}", n_rows, n_cols);
+        println!("pixel [BGR]: {:#?}", pixel);
+        println!("pixel [B] {:#?}", pixel [0]);
+        println!("reduced pixel [B] {:#?}", table [pixel [0] as usize]);
+
+         for i in 0..n_cols {
+             let pixel = m.at_mut::<Vec3b>(i).unwrap ();
+             for j in 0..3 {
+                 pixel [j] = table [pixel [j] as usize];
+             }
+         }
+
+
         // points [0] = 121;
         // println!("{:#?}", points [0]);
-
 
 
         m

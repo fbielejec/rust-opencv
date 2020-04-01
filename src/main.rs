@@ -11,11 +11,10 @@ use opencv::{
     imgcodecs
 };
 
-fn hello_opencv() -> opencv::Result<()> {
-    let image = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_GRAYSCALE).unwrap();
-    highgui::named_window("hello opencv!", 0).unwrap();
-    highgui::imshow("hello opencv!", &image).unwrap();
-    highgui::wait_key(10000).unwrap();
+fn display_img(image: &Mat) -> opencv::Result<()> {
+    highgui::named_window("hello opencv!", 0)?;
+    highgui::imshow("hello opencv!", image)?;
+    highgui::wait_key(10000)?;
 
     Ok(())
 }
@@ -68,7 +67,7 @@ fn mat () -> opencv::Result<()> {
  * https://docs.opencv.org/master/db/da5/tutorial_how_to_scan_images.html
  * https://github.com/opencv/opencv/blob/master/samples/cpp/tutorial_code/core/how_to_scan_images/how_to_scan_images.cpp
  */
-// TODO : reduce w. the table
+// TODO : reduce w. built in LUT
 fn scan_images () -> opencv::Result<()> {
 
     fn scan_image_and_reduce (m : &mut Mat, table : [u8; 256] ) -> &Mat {
@@ -79,6 +78,7 @@ fn scan_images () -> opencv::Result<()> {
         let channels = m.channels ().unwrap ();
         let mut n_rows = m.rows ();
         let mut n_cols = m.cols ();
+        let mut channels = m.channels ().unwrap ();
 
         if m.is_continuous ().unwrap () {
             n_cols *= n_rows;
@@ -91,17 +91,17 @@ fn scan_images () -> opencv::Result<()> {
         // or by row, col:
         let pixel = m.at_2d::<Vec3b>(511, 511).unwrap ();
 
-        println!("rows: {} cols: {}", n_rows, n_cols);
+        println!("rows: {} cols: {} elem-size: {}", n_rows, n_cols, channels);
         println!("pixel [BGR]: {:#?}", pixel);
         println!("pixel [B] {:#?}", pixel [0]);
         println!("reduced pixel [B] {:#?}", table [pixel [0] as usize]);
 
-         for i in 0..n_cols {
-             let pixel = m.at_mut::<Vec3b>(i).unwrap ();
-             for j in 0..3 {
-                 pixel [j] = table [pixel [j] as usize];
-             }
-         }
+        for i in 0..n_cols {
+            let pixel = m.at_mut::<Vec3b>(i).unwrap ();
+            for j in 0..3 {
+                pixel [j] = table [pixel [j] as usize];
+            }
+        }
 
 
         // points [0] = 121;
@@ -111,19 +111,18 @@ fn scan_images () -> opencv::Result<()> {
         m
     }
 
-    let divide_with: u8 = 10;
+
 
     // println!("{} {}", imgcodecs::IMREAD_COLOR, imgcodecs::IMREAD_GRAYSCALE);
 
     let mut image : Mat = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_COLOR)?;
-
-    println!("{:#?}", image);
 
     // get an element
     let row = image.at_2d::<Vec3b>(0, 0)?;
     println!("{:#?}", row);
 
     // create a lookup table
+    let divide_with: u8 = 100;
     let mut table: [u8; 256] = [0; 256];
     (0..256).for_each (|i: usize| {
         table [i] = divide_with * (i as u8 / divide_with);
@@ -134,13 +133,17 @@ fn scan_images () -> opencv::Result<()> {
     let mut image_clone: Mat = image.clone()?;
     let image_reduced = scan_image_and_reduce(&mut image_clone, table);
 
+    display_img(&image_reduced);
+
 
     Ok(())
 }
 
 
 fn main() {
-    // hello_opencv().unwrap()
+    // let image = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_GRAYSCALE).unwrap();
+    // display_img(&image).unwrap();
+
     mat ().unwrap ();
     scan_images ().unwrap ();
 }

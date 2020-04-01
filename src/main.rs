@@ -125,20 +125,26 @@ fn scan_images () -> opencv::Result<()> {
         table [i] = divide_with * (i as u8 / divide_with);
     });
 
-    // println!("{} {}", table [0], table [255]);
+    println!("{} {}", table [0], table [255]);
 
     let mut image_clone: Mat = image.clone()?;
     let image_reduced = scan_image_and_reduce(&mut image_clone, table);
 
     // display_img(&image);
-    display_img(&image_clone);
+    // display_img(&image_reduced);
 
-    // TODO : LUT
+    // LUT
     // http://www.poumeyrol.fr/doc/opencv-rust/opencv/core/fn.lut.html
-    let look_up_table = Mat::new_rows_cols_with_default(image.rows (), image.cols (), Vec3b::typ(), Scalar::default())?;
+    let image_clone = image.clone()?;
+    let look_up_table : Mat = Mat::from_slice (&table)?;
 
+    // println!("{:#?}", look_up_table);
+    // println!("{} {}", look_up_table.at_2d::<u8> (0,0)?, look_up_table.at_2d::<u8> (0,255)?);
 
+    let mut image_reduced : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), Vec3b::typ(), Scalar::default())?;
 
+    cv::lut(&image_clone, &look_up_table, &mut image_reduced);
+    display_img(&image_reduced);
 
     Ok(())
 }

@@ -63,7 +63,6 @@ fn mat () -> opencv::Result<()> {
 
     // println!("DATA : {:#?}", mat.data ().unwrap ());
 
-
     Ok(())
 }
 
@@ -152,37 +151,64 @@ fn scan_images () -> opencv::Result<()> {
 }
 
 
-// TODO : mask opearations
-// https://docs.opencv.org/master/d7/d37/tutorial_mat_mask_operations.html
 /*
  * Demonstrates how to apply a (sharpen) mask to an image
+ * https://docs.opencv.org/master/d7/d37/tutorial_mat_mask_operations.html
+ *
  */
 fn image_mask () -> opencv::Result<()> {
 
+    // TODO : broken
     fn sharpen (image: &Mat, result: &mut Mat) -> opencv::Result<()> {
 
         let n_channels: i32 = image.channels ()? ;
         let n_rows: i32 = image.rows () ;
         let n_cols: i32 = image.cols () ;
 
+        // for i in 1..n_rows {
+        //     for j in 1..n_cols {
+
+        //         let top = image.at_2d::<Vec3b>(i + 1, j)?;
+        //         let bottom = image.at_2d::<Vec3b>(i - 1, j)?;
+        //         let current = image.at_2d::<Vec3b>(i, j)?;
+        //         let left = image.at_2d::<Vec3b>(i, j - 1)?;
+        //         let right = image.at_2d::<Vec3b>(i, j + 1)?;
+
+        //         let pixel = result.at_2d_mut::<Vec3b>(i, j)?;
+        //         for k in 0..n_channels as usize {
+
+        //             let (mut value, _) = 5u8.overflowing_mul(current[k]);
+        //             let (mut value, _) = value.overflowing_sub(top[k]);
+        //             let (mut value, _) = value.overflowing_sub(bottom[k]);
+        //             let (mut value, _) = value.overflowing_sub(left[k]);
+        //             let (mut value, _) = value.overflowing_sub(right[k]);
+
+        //             // TODO
+        //             pixel [k] = 255;//value;
+
+        //         }
+
+        //     }
+        // }
+
         let n: i32 = n_rows * n_cols;
-        for i in 3..(n - 3) {
+        for j in 3..(n - 3) {
 
-            let previous_previous = image.at::<Vec3b>(i - 3)?;
-            let previous = image.at::<Vec3b>(i - 1)?;
-            let current = image.at::<Vec3b>(i)?;
-            let next = image.at::<Vec3b>(i + 1)?;
-            let next_next = image.at::<Vec3b>(i + 3)?;
+            let top = image.at::<Vec3b>(j - 3)?;
+            let bottom = image.at::<Vec3b>(j + 3)?;
+            let current = image.at::<Vec3b>(j)?;
+            let left = image.at::<Vec3b>(j - 1)?;
+            let right = image.at::<Vec3b>(j + 1)?;
 
-            let pixel = result.at_mut::<Vec3b>(i)?;
+            let pixel = result.at_mut::<Vec3b>(j)?;
 
-            for j in 0..n_channels as usize {
-                let (mut value, _) = 5u8.overflowing_mul(current[j]);
-                let (mut value, _) = value.overflowing_sub(previous_previous[j]);
-                let (mut value, _) = value.overflowing_sub(previous[j]);
-                let (mut value, _) = value.overflowing_sub(next[j]);
-                let (mut value, _) = value.overflowing_sub(next_next[j]);
-                pixel [j] = value;
+            for k in 0..n_channels as usize {
+                let (mut value, _) = 5u8.overflowing_mul(current[k]);
+                let (mut value, _) = value.overflowing_sub(top[k]);
+                let (mut value, _) = value.overflowing_sub(bottom[k]);
+                let (mut value, _) = value.overflowing_sub(left[k]);
+                let (mut value, _) = value.overflowing_sub(right[k]);
+                pixel [k] = value;
             }
         }
 

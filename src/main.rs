@@ -31,9 +31,9 @@ fn mat () -> opencv::Result<()> {
     // create a matrix
     // <opencv::core::Vec3<u8> as Trait>::typ
     let m = Mat::new_rows_cols_with_default(2, 2,
-                                                Vec3b::typ(),
-                                                // u8::typ(),
-                                                Scalar::new(0., 0., 0., 255.))?;
+                                            Vec3b::typ(),
+                                            // u8::typ(),
+                                            Scalar::new(0., 0., 0., 255.))?;
 
     println!("{:#?}", m);
 
@@ -130,7 +130,7 @@ fn scan_images () -> opencv::Result<()> {
     let mut image_clone: Mat = image.clone()?;
     let image_reduced = scan_image_and_reduce(&mut image_clone, table);
 
-    // display_img(&image);
+
     // display_img(&image_reduced);
 
     // LUT
@@ -146,6 +146,60 @@ fn scan_images () -> opencv::Result<()> {
     cv::lut(&image_clone, &look_up_table, &mut image_reduced);
     display_img(&image_reduced);
 
+    // display_img(&image);
+
+    Ok(())
+}
+
+
+// TODO : mask opearations
+// https://docs.opencv.org/master/d7/d37/tutorial_mat_mask_operations.html
+/*
+ * Demonstrates how to apply a (sharpen) mask to an image
+ */
+fn image_mask () -> opencv::Result<()> {
+
+    fn sharpen (image: &Mat, result: &mut Mat) -> opencv::Result<()> {
+
+        let n_channels: i32 = image.channels ()? ;
+        let n_rows: i32 = image.rows () ;
+        let n_cols: i32 = image.cols () ;
+
+        let mut tmp = 0;
+
+        let n: i32 = n_rows * n_cols;
+        for i in 3..(n - 3) {
+
+            let previous_previous = image.at::<Vec3b>(i - 3)?;
+            let previous = image.at::<Vec3b>(i - 1)?;
+            let current  = image.at::<Vec3b>(i    )?;
+            let next     = image.at::<Vec3b>(i + 1)?;
+            let next_next     = image.at::<Vec3b>(i + 3)?;
+
+            let pixel = result.at_mut::<Vec3b>(i)?;
+
+            for j in 0..n_channels as usize {
+                let (mut value, _) = 5u8.overflowing_mul(current[j]);
+                let (mut value, _) = value.overflowing_sub(previous_previous[j]);
+                let (mut value, _) = value.overflowing_sub(previous[j]);
+                let (mut value, _) = value.overflowing_sub(next[j]);
+                let (mut value, _) = value.overflowing_sub(next_next[j]);
+                pixel [j] = value;
+            }
+        }
+
+        Ok(())
+    }
+
+    let image : Mat = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_COLOR)?;
+    let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
+
+    println!("{:#?}", image);
+
+    sharpen (&image, &mut image_sharpened);
+
+    display_img(&image_sharpened);
+
     Ok(())
 }
 
@@ -155,5 +209,7 @@ fn main() {
     // display_img(&image).unwrap();
 
     // mat ().unwrap ();
-    scan_images ().unwrap ();
+    // scan_images ().unwrap ();
+    image_mask ().unwrap ();
+
 }

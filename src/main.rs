@@ -7,6 +7,7 @@ use opencv::core as cv;
 
 use opencv::{
     core::{self, MatConstIterator, Point, Rect, Scalar, Size, Vec3, Vec2b, Vec3b, Vec3d, Vec3f, Vec4w},
+    imgproc, //::{filter_2d }
     Error,
     prelude::*,
     Result,
@@ -130,7 +131,6 @@ fn scan_images () -> opencv::Result<()> {
     let mut image_clone: Mat = image.clone()?;
     let image_reduced = scan_image_and_reduce(&mut image_clone, table);
 
-
     // display_img(&image_reduced);
 
     // LUT
@@ -165,16 +165,14 @@ fn image_mask () -> opencv::Result<()> {
         let n_rows: i32 = image.rows () ;
         let n_cols: i32 = image.cols () ;
 
-        let mut tmp = 0;
-
         let n: i32 = n_rows * n_cols;
         for i in 3..(n - 3) {
 
             let previous_previous = image.at::<Vec3b>(i - 3)?;
             let previous = image.at::<Vec3b>(i - 1)?;
-            let current  = image.at::<Vec3b>(i    )?;
-            let next     = image.at::<Vec3b>(i + 1)?;
-            let next_next     = image.at::<Vec3b>(i + 3)?;
+            let current = image.at::<Vec3b>(i)?;
+            let next = image.at::<Vec3b>(i + 1)?;
+            let next_next = image.at::<Vec3b>(i + 3)?;
 
             let pixel = result.at_mut::<Vec3b>(i)?;
 
@@ -193,12 +191,24 @@ fn image_mask () -> opencv::Result<()> {
 
     let image : Mat = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_COLOR)?;
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
-
-    println!("{:#?}", image);
-
     sharpen (&image, &mut image_sharpened);
 
     display_img(&image_sharpened);
+
+    // filter2D
+    // https://docs.rs/opencv/0.33.0/opencv/imgproc/fn.filter_2d.html
+
+    let kernel = Mat::from_slice_2d(&[
+        &[ 0,  -1,  0],
+        &[ -1,  5,  -1],
+        &[ 0, -1, 0i32]
+    ])?;
+
+    let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
+    imgproc::filter_2d( &image, &mut image_sharpened, image.depth()?, &kernel, Point::new(-1,-1), 0.0, cv::BORDER_DEFAULT);
+    // display_img(&image_sharpened);
+
+
 
     Ok(())
 }

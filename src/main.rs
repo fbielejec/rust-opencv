@@ -46,8 +46,8 @@ fn mat () -> opencv::Result<()> {
     println!("{:#?}", row);
 
     // get an element
-    let row = m.at_2d::<Vec3b>(0, 0)?;
-    println!("{:#?}", row);
+    let pixel = m.at_2d::<Vec3b>(0, 0)?;
+    println!("{:#?}", pixel);
 
     let points = m.at::<Vec3b>(0)?;
     println!("- POINTS - {:#?}", points);
@@ -142,8 +142,8 @@ fn scan_images () -> opencv::Result<()> {
 
     let mut image_reduced : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), Vec3b::typ(), Scalar::default())?;
 
-    cv::lut(&image_clone, &look_up_table, &mut image_reduced);
-    display_img(&image_reduced);
+    cv::lut(&image_clone, &look_up_table, &mut image_reduced).ok();
+    display_img(&image_reduced).ok();
 
     // display_img(&image);
 
@@ -210,11 +210,11 @@ fn image_mask () -> opencv::Result<()> {
             let pixel = result.at_mut::<Vec3b>(j)?;
 
             for k in 0..n_channels as usize {
-                let (mut value, _) = 5u8.overflowing_mul(current[k]);
-                let (mut value, _) = value.overflowing_sub(top[k]);
-                let (mut value, _) = value.overflowing_sub(bottom[k]);
-                let (mut value, _) = value.overflowing_sub(left[k]);
-                let (mut value, _) = value.overflowing_sub(right[k]);
+                let ( value, _) = 5u8.overflowing_mul(current[k]);
+                let ( value, _) = value.overflowing_sub(top[k]);
+                let ( value, _) = value.overflowing_sub(bottom[k]);
+                let ( value, _) = value.overflowing_sub(left[k]);
+                let ( value, _) = value.overflowing_sub(right[k]);
                 pixel [k] = value;
             }
         }
@@ -224,7 +224,7 @@ fn image_mask () -> opencv::Result<()> {
 
     let image : Mat = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_COLOR)?;
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
-    sharpen (&image, &mut image_sharpened);
+    sharpen (&image, &mut image_sharpened).ok();
 
     // display_img(&image_sharpened);
 
@@ -238,8 +238,8 @@ fn image_mask () -> opencv::Result<()> {
     ])?;
 
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
-    imgproc::filter_2d( &image, &mut image_sharpened, image.depth()?, &kernel, Point::new(-1,-1), 0.0, cv::BORDER_DEFAULT);
-    display_img(&image_sharpened);
+    imgproc::filter_2d( &image, &mut image_sharpened, image.depth()?, &kernel, Point::new(-1,-1), 0.0, cv::BORDER_DEFAULT).ok();
+    display_img(&image_sharpened).ok();
 
     Ok(())
 }
@@ -249,6 +249,11 @@ fn image_mask () -> opencv::Result<()> {
  * Demonstrates Basic operations with images
  */
 fn image_operations () -> opencv::Result<()> {
+
+    let image : Mat = imgcodecs::imread("lena.jpg", imgcodecs::IMREAD_COLOR)?;
+
+
+
 
     Ok(())
 }

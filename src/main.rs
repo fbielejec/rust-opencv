@@ -150,23 +150,25 @@ fn scan_images () -> opencv::Result<()> {
     Ok(())
 }
 
-
 /*
  * Demonstrates how to apply a (sharpen) mask to an image
  * https://docs.opencv.org/master/d7/d37/tutorial_mat_mask_operations.html
- *
  */
 fn image_mask () -> opencv::Result<()> {
 
-    // TODO : broken
+    fn saturate_cast (value: &i32) -> u8 {
+        (u8::min_value () as i32 +
+         (u8::max_value () as i32 / i32::max_value () ) * value) as u8
+    }
+
     fn sharpen (image: &Mat, result: &mut Mat) -> opencv::Result<()> {
 
         let n_channels: i32 = image.channels ()? ;
         let n_rows: i32 = image.rows () ;
         let n_cols: i32 = image.cols () ;
 
-        // for i in 1..n_rows {
-        //     for j in 1..n_cols {
+        // for i in 1..n_rows - 1 {
+        //     for j in 1..n_cols - 1 {
 
         //         let top = image.at_2d::<Vec3b>(i + 1, j)?;
         //         let bottom = image.at_2d::<Vec3b>(i - 1, j)?;
@@ -177,19 +179,24 @@ fn image_mask () -> opencv::Result<()> {
         //         let pixel = result.at_2d_mut::<Vec3b>(i, j)?;
         //         for k in 0..n_channels as usize {
 
-        //             let (mut value, _) = 5u8.overflowing_mul(current[k]);
-        //             let (mut value, _) = value.overflowing_sub(top[k]);
-        //             let (mut value, _) = value.overflowing_sub(bottom[k]);
-        //             let (mut value, _) = value.overflowing_sub(left[k]);
-        //             let (mut value, _) = value.overflowing_sub(right[k]);
+        //             // let (mut value, _) = 5u8.overflowing_mul(current[k]);
+        //             // let (mut value, _) = value.overflowing_sub(top[k]);
+        //             // let (mut value, _) = value.overflowing_sub(bottom[k]);
+        //             // let (mut value, _) = value.overflowing_sub(left[k]);
+        //             // let (mut value, _) = value.overflowing_sub(right[k]);
 
-        //             // TODO
-        //             pixel [k] = 255;//value;
+        //             let value : i32 = 5 * current [k] as i32 - top [k] as i32
+        //                 - bottom [k] as i32 - left [k] as i32 - right [k] as i32;
+
+        //             let a = saturate_cast (&value);
+
+        //             pixel [k] = 0 ;//value;
 
         //         }
-
         //     }
         // }
+
+        // TODO : broken
 
         let n: i32 = n_rows * n_cols;
         for j in 3..(n - 3) {
@@ -219,7 +226,7 @@ fn image_mask () -> opencv::Result<()> {
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
     sharpen (&image, &mut image_sharpened);
 
-    display_img(&image_sharpened);
+    // display_img(&image_sharpened);
 
     // filter2D
     // https://docs.rs/opencv/0.33.0/opencv/imgproc/fn.filter_2d.html
@@ -232,9 +239,16 @@ fn image_mask () -> opencv::Result<()> {
 
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
     imgproc::filter_2d( &image, &mut image_sharpened, image.depth()?, &kernel, Point::new(-1,-1), 0.0, cv::BORDER_DEFAULT);
-    // display_img(&image_sharpened);
+    display_img(&image_sharpened);
 
+    Ok(())
+}
 
+/*
+ * https://docs.opencv.org/master/d5/d98/tutorial_mat_operations.html
+ * Demonstrates Basic operations with images
+ */
+fn image_operations () -> opencv::Result<()> {
 
     Ok(())
 }
@@ -246,6 +260,7 @@ fn main() {
 
     // mat ().unwrap ();
     // scan_images ().unwrap ();
-    image_mask ().unwrap ();
+    // image_mask ().unwrap ();
+    image_operations ().unwrap ();
 
 }

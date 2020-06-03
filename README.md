@@ -1,4 +1,4 @@
-# [eye-tracker](https://github.com/fbielejec/eye-tracker)
+# [rust-opencv-tutorials](https://github.com/fbielejec/rust-opencv)
 
 A primer on using [OpenCV](https://opencv.org/opencv-4-0/) with [Rust](https://www.rust-lang.org/).
 

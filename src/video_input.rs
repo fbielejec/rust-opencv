@@ -1,14 +1,8 @@
-// extern crate opencv;
-
-// use opencv::core as cv;
-
 use {
     opencv::{
-        core::{self, psnr},
+        core::{psnr},
         prelude::*,
-        // videoio,
         videoio::{self, VideoCapture},
-        highgui,
     },
     crate::{utils}
 };
@@ -20,8 +14,6 @@ use {
  * https://github.com/twistedfall/opencv-rust/blob/master/examples/video_capture.rs
  */
 pub fn run () -> opencv::Result<()> {
-
-    const PSNR_TRIGGER_VALUE: f64 = 40.0;
 
     let mut capture_reference = VideoCapture::from_file("Megamind.avi", videoio::CAP_ANY)?;
     if !VideoCapture::is_opened(&capture_reference)? {
@@ -43,7 +35,7 @@ pub fn run () -> opencv::Result<()> {
         capture_reference.read(&mut frame_reference)?;
         capture_test.read(&mut frame_test)?;
 
-        if( utils::empty(&frame_reference)? || utils::empty(&frame_test)? ) {
+        if utils::empty(&frame_reference)? || utils::empty(&frame_test)?  {
             println!("No more video frames to read");
             break;
         }
@@ -53,14 +45,6 @@ pub fn run () -> opencv::Result<()> {
 
         println!("Frame: #{}", frame_number);
         println!("{} dB", psnr_value);
-
-        if (psnr_value < PSNR_TRIGGER_VALUE) {
-            // let mssim_value = getMSSIM(frameReference, frameUnderTest);
-            // cout << " MSSIM: "
-            //     << " R " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[2] * 100 << "%"
-            //     << " G " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[1] * 100 << "%"
-            //     << " B " << setiosflags(ios::fixed) << setprecision(2) << mssimV.val[0] * 100 << "%";
-        }
 
         frame_number = frame_number + 1;
     }

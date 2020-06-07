@@ -1,8 +1,8 @@
-# [rust-opencv-tutorials](https://github.com/fbielejec/rust-opencv)
+# [rust-opencv](https://github.com/fbielejec/rust-opencv)
 
 A primer on using [OpenCV](https://opencv.org/opencv-4-0/) with [Rust](https://www.rust-lang.org/).
 
-## Doumentation
+## Documentation
 
 - [Rust bindings for OpenCV - repository and examples](https://github.com/twistedfall/opencv-rust/)
 - [Rust bindings for OpenCV - documentation](https://docs.rs/opencv/0.33.0/opencv/)
@@ -10,7 +10,7 @@ A primer on using [OpenCV](https://opencv.org/opencv-4-0/) with [Rust](https://w
 
 ## Development
 
-### Install developer tools
+### Install development tools
 ```bash
 sudo apt-get install build-essential cmake unzip pkg-config
 ```

@@ -8,6 +8,7 @@ mod mat_mask_operations;
 mod mat_operations;
 mod video_input;
 mod cascade_classifier;
+mod eye_tracker;
 
 fn main() {
 
@@ -23,7 +24,7 @@ fn main() {
 
     // io::stdin().read_line(&mut input).expect ("Failed to read the line");
 
-    let number: u32 = 6;
+    let number: u32 = 7;
     // match input.trim().parse() {
     //     Ok(num) => num,
     //     Err(_) => panic!("Aaaa!!!"),
@@ -36,6 +37,7 @@ fn main() {
         4 => mat_operations::run ().expect("Runtime error"),
         5 => video_input::run ().expect("Runtime error"),
         6 => cascade_classifier::run ().expect("Runtime error"),
+        7 => eye_tracker::run ().expect("Runtime error"),
 
         _ => println!("meh"),
     }

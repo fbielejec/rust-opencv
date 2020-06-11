@@ -1,14 +1,13 @@
 use {
     opencv::{
-        core::{self, psnr},
+        core,
         objdetect,
         imgproc,
         types,
         prelude::*,
-        videoio::{self, VideoCapture},
+        videoio,
         highgui
-    },
-    crate::{utils}
+    }
 };
 
 /*

@@ -136,23 +136,17 @@ fn detect_eyes (frame : &Mat,
             }
         )?;
 
-        // TODO : scale back to frame coords
-
-        // faces[0].tl() + eye.tl(), faces[0].tl() + eye.br()
-        // eyes detected:
-        // Ok(Rect_ { x: 49, y: 60, width: 44, height: 44 })
-        // Ok(Rect_ { x: 122, y: 52, width: 63, height: 63 })
-
+        // scale back to frame coords
         let mut eyes_scaled = types::VectorOfRect::new();
         for mut eye in eyes.iter () {
 
-        println! ("@@@ {:?}", eye.tl() );
+            let face = faces.get (0)?;
 
-            eye.x = 50;
+            eye.x = face.tl ().x + eye.tl().x  ;
+            eye.y = face.tl ().y + eye.tl().y   ;
+
             eyes_scaled.push (eye);
         }
-
-        // println! ("@@@ {}", eyes_scaled.len () );
 
         return Ok(eyes_scaled);
     }

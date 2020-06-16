@@ -9,6 +9,7 @@ use {
         videoio,
         highgui
     }
+    // utils
 };
 
 /*
@@ -20,8 +21,8 @@ pub fn run () -> opencv::Result<()> {
     let face_detector_name : &str = "/opt/opencv/opencv-4.2.0/data/haarcascades/haarcascade_frontalface_alt.xml";
     let eyes_detector_name : &str = "/opt/opencv/opencv-4.2.0/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
 
-    let window = "video capture";
-    highgui::named_window(window, 1)?;
+    let window_name = "camera";
+    highgui::named_window(window_name, 1)?;
 
     let (face_features, eyes_features, mut cam) = {
         (
@@ -44,21 +45,15 @@ pub fn run () -> opencv::Result<()> {
         cam.read(&mut frame)?;
 
         let enhanced_frame = enhance_frame (&frame)?;
-
-        // println!("frame: {:#?}", enhanced_frame);
-
         let faces = detect_faces (&enhanced_frame,
                                   &mut face_detector_model)?;
 
         if faces.len () > 0 {
-
-            // println!("faces detected: {}", faces.len ());
-
             // region of interest (submatrix), first detected face
-            let face = Mat::roi (&enhanced_frame, faces.get (0)?)?;
+            let face_region = Mat::roi (&enhanced_frame, faces.get (0)?)?;
 
             // detect eyes
-            let eyes = detect_eyes (&face,
+            let eyes = detect_eyes (&face_region,
                                     &mut eyes_detector_model)?;
 
             if eyes.len () == 2 {
@@ -74,7 +69,7 @@ pub fn run () -> opencv::Result<()> {
                             face.tl ().y + eye.tl ().y,
                             eye.width,
                             eye.height
-                        ),// eye,
+                        ), // eye
                         core::Scalar::new(0f64, -1f64, -1f64, -1f64),
                         1, // thickness
                         8, // line type
@@ -82,25 +77,30 @@ pub fn run () -> opencv::Result<()> {
                     )?;
                 }
 
-                // TODO : does it guarantee the leftmost eye ?
-                let left_eye = Mat::roi (&enhanced_frame, eyes.get (0)?)?;
+                let left_eye = Mat::roi (&face_region, eyes.get (0)?)?;
+                highgui::imshow("eye", &left_eye)?;
 
                 // TODO: detects n circles, select iris
                 // TODO : stabilize (n means)
                 let iris = detect_iris (&left_eye)?;
 
+                // highgui::imshow(window, &left_eye)?;
+
                 if iris.len () > 0 {
                     println!("iris detected: n: {} {:#?}", iris.len (), iris.get (0)?);
 
-                    // TODO : draw iris
                     let eye = eyes.get (0)?;
                     let face = faces.get (0)?;
 
                     for ir in iris {
                         imgproc::circle(
                             &mut frame,
-                            Point::new (face.tl ().x + eye.tl ().x + ir.x as i32,
-                                        face.tl ().y + eye.tl ().y + ir.y as i32),
+                            Point::new (face.tl ().x
+                                        + eye.tl ().x
+                                        + ir.x as i32,
+                                        face.tl ().y
+                                        + eye.tl ().y
+                                        + ir.y as i32),
                             ir.z as i32,
                             Scalar::new(0f64, 0f64, 255f64, 0f64),
                             1,
@@ -109,16 +109,16 @@ pub fn run () -> opencv::Result<()> {
                         )?;
                     }
 
-                    let params = types::VectorOfi32::new ();
-                    imgcodecs::imwrite ("/home/filip/iris.png",
-                                       &mut frame,
-                                        &params);
+                    // let params = types::VectorOfi32::new ();
+                    // imgcodecs::imwrite ("/home/filip/iris.png",
+                    //                     &mut frame,
+                    //                     &params);
 
                 }
             }
         }
 
-        highgui::imshow(window, &frame)?;
+        highgui::imshow(window_name, &frame)?;
         if highgui::wait_key(10)? > 0 {
             break;
         }
@@ -161,15 +161,12 @@ fn detect_faces (frame : &Mat,
         core::Size {
             width: 150,
             height: 150
-        }, // minSize: Minimum possible object size. Objects smaller than that are ignored (poor quality webcam is 640 x 480, so that should do it)
+        }, // min_size. Objects smaller than that are ignored (poor quality webcam is 640 x 480, so that should do it)
         core::Size {
             width: 0,
             height: 0
-        } // maxSize
+        } // max_size
     )?;
-
-    // region of interest (submatrix)
-    // let mut face = Mat::roi (&frame, faces.get (0)?)?;
 
     Ok (faces)
 }
@@ -180,39 +177,21 @@ fn detect_eyes (frame : &Mat,
 
     let mut eyes = types::VectorOfRect::new();
 
-    // region of interest (submatrix)
-    // let mut face = Mat::roi (&frame, faces.get (0)?)?;
-
     eyes_model.detect_multi_scale(
         &frame,
         &mut eyes,
-        // eyes_ref,
         1.1,
         2,
         objdetect::CASCADE_SCALE_IMAGE,
         core::Size {
             width: 30,
             height: 30
-        },
+        }, // min_size
         core::Size {
             width: 0,
             height: 0
         }
     )?;
-
-    // scale back to frame coords
-    // let mut eyes_scaled = types::VectorOfRect::new();
-    // for mut eye in eyes.iter () {
-
-    //     let face = faces.get (0)?;
-
-    //     eye.x = face.tl ().x + eye.tl().x  ;
-    //     eye.y = face.tl ().y + eye.tl().y   ;
-
-    //     eyes_scaled.push (eye);
-    // }
-
-    // return Ok(eyes_scaled);
 
     Ok(eyes)
 }
@@ -220,19 +199,10 @@ fn detect_eyes (frame : &Mat,
 fn detect_iris (frame : &Mat)
                 -> opencv::Result<types::VectorOfPoint3f> {
 
-    // let mut circles = Mat::new_rows_cols_with_default(
-    //     frame.rows (),
-    //     frame.cols (),
-    //     // u8::typ(),
-    //     frame.typ ()?,
-    //     Scalar::all(0.),
-    //     // Scalar::new(0., 0., 0., 0.)
-    //     // Scalar::default()
-    // )?;
+    // println!("@@@ detect_iris {:#?}", frame);
 
     // collection of (x,y, radius)
     let mut circles = types::VectorOfPoint3f::new();
-    // types::VectorOfVec3f::new();
 
     imgproc::hough_circles(
         &frame,
@@ -241,14 +211,12 @@ fn detect_iris (frame : &Mat)
         1.0, // dp, inverse ratio of the accumulator resolution
         frame.cols () as f64 / 8.0, // min_dist between the center of one circle and another
         250.0, //  threshold of the edge detector
-        15.0, // min_area: What’s the min area of a circle in the image?
-        frame.rows () / 8, // min_radius of a circle in the image?
-        frame.rows () / 3 // max_radius of a circle in the image?
+        5.0, // min_area of a circle in the image
+        // 0,
+        // 0
+        frame.rows () / 16, // min_radius of a circle in the image
+        frame.rows () / 4 // max_radius of a circle in the image
     )?;
-
-    // let circles_region = Rect::new(1, 1, 2, 2);
-
-    // let c = types::VectorOfRect::as_raw_VectorOfRect (circles);
 
     Ok (circles)
 }

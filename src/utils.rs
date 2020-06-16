@@ -6,9 +6,10 @@ use opencv::{
     highgui
 };
 
-pub fn display_img(image: &Mat) -> opencv::Result<()> {
-    highgui::named_window("hello opencv!", 0)?;
-    highgui::imshow("hello opencv!", image)?;
+pub fn display_img(image: &Mat, title: Option<&str>) -> opencv::Result<()> {
+    let t = title.unwrap_or ("window");
+    highgui::named_window(t, 0)?;
+    highgui::imshow(t, image)?;
     highgui::wait_key(10000)?;
 
     Ok(())

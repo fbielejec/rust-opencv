@@ -74,7 +74,7 @@ pub fn run () -> opencv::Result<()> {
     let mut image_clone: Mat = image.clone()?;
     let image_reduced = scan_image_and_reduce(&mut image_clone, table);
 
-    utils::display_img(&image_reduced).expect ("Could not display image");
+    utils::display_img(&image_reduced, None).expect ("Could not display image");
 
     // LUT
     // http://www.poumeyrol.fr/doc/opencv-rust/opencv/core/fn.lut.html
@@ -88,7 +88,7 @@ pub fn run () -> opencv::Result<()> {
 
     // ok() converts Result<T,E> to Option<T>, converting errors to None (ingnoring None does not trigger a warning).
     cv::lut(&image_clone, &look_up_table, &mut image_reduced).ok();
-    utils::display_img(&image_reduced).ok();
+    utils::display_img(&image_reduced, None).ok();
 
     // display_img(&image);
 

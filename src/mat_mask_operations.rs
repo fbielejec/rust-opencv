@@ -76,7 +76,7 @@ pub fn run () -> opencv::Result<()> {
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
     sharpen (&image, &mut image_sharpened).ok();
 
-    utils::display_img(&image_sharpened).expect ("Error displaying image");
+    utils::display_img(&image_sharpened, None).expect ("Error displaying image");
 
     // filter2D
     // https://docs.rs/opencv/0.33.0/opencv/imgproc/fn.filter_2d.html
@@ -90,7 +90,7 @@ pub fn run () -> opencv::Result<()> {
     let mut image_sharpened : Mat = Mat::new_rows_cols_with_default(image.rows (), image.cols (), image.typ ()?, Scalar::default())?;
     imgproc::filter_2d( &image, &mut image_sharpened, image.depth()?, &kernel, Point::new(-1,-1), 0.0, core::BORDER_DEFAULT).ok();
 
-    utils::display_img(&image_sharpened).ok();
+    utils::display_img(&image_sharpened, None).ok();
 
     Ok(())
 }

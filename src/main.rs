@@ -8,6 +8,7 @@ mod mat_mask_operations;
 mod mat_operations;
 mod video_input;
 mod cascade_classifier;
+mod timm_barth;
 mod eye_tracker;
 
 fn main() {

@@ -1,14 +1,14 @@
 use {
     opencv::{
-        core::{self, Scalar, Vec3f, Point, Rect},
+        core::{self, Scalar, Point, Rect},
         objdetect,
         imgproc,
-        imgcodecs,
         types,
         prelude::*,
         videoio,
         highgui
-    }
+    },
+    timm_barth
     // utils
 };
 
@@ -17,6 +17,8 @@ use {
  * Move cursor
  */
 pub fn run () -> opencv::Result<()> {
+
+    // const K_SMOOTH_FACE_FACTOR: f64 = 0.005;
 
     let face_detector_name : &str = "/opt/opencv/opencv-4.2.0/data/haarcascades/haarcascade_frontalface_alt.xml";
     let eyes_detector_name : &str = "/opt/opencv/opencv-4.2.0/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
@@ -44,7 +46,16 @@ pub fn run () -> opencv::Result<()> {
         let mut frame = Mat::default()?;
         cam.read(&mut frame)?;
 
+        // let mut rgb_channels = types::VectorOfMat::new ();
+        // core::split (&frame, &mut rgb_channels);
+
+        // println!("frame: {:#?}", frame);
+        // println!("rgb: {:#?}", rgb_channels .get (2)?);
+
         let enhanced_frame = enhance_frame (&frame)?;
+
+        // println!("enhanced frame : {:#?}", enhanced_frame);
+
         let faces = detect_faces (&enhanced_frame,
                                   &mut face_detector_model)?;
 
@@ -65,7 +76,7 @@ pub fn run () -> opencv::Result<()> {
                     imgproc::rectangle(
                         &mut frame,
                         Rect::new (
-                            face.tl ().x + eye.tl ().x ,
+                            face.tl ().x + eye.tl ().x,
                             face.tl ().y + eye.tl ().y,
                             eye.width,
                             eye.height
@@ -77,17 +88,15 @@ pub fn run () -> opencv::Result<()> {
                     )?;
                 }
 
-                let left_eye = Mat::roi (&face_region, eyes.get (0)?)?;
-                highgui::imshow("eye", &left_eye)?;
+                let left_eye_region = Mat::roi (&face_region, eyes.get (0)?)?;
+                // highgui::imshow("DEBUG", &left_eye_region)?;
 
                 // TODO: detects n circles, select iris
+                let iris = detect_iris (&left_eye_region)?;
                 // TODO : stabilize (n means)
-                let iris = detect_iris (&left_eye)?;
-
-                // highgui::imshow(window, &left_eye)?;
 
                 if iris.len () > 0 {
-                    println!("iris detected: n: {} {:#?}", iris.len (), iris.get (0)?);
+                    // println!("iris detected: n: {} {:#?}", iris.len (), iris.get (0)?);
 
                     let eye = eyes.get (0)?;
                     let face = faces.get (0)?;
@@ -115,6 +124,22 @@ pub fn run () -> opencv::Result<()> {
                     //                     &params);
 
                 }
+
+                // TODO
+                let eye_center = timm_barth::find_eye_center (&left_eye_region)?;
+                // imgproc::circle(
+                //     &mut frame,
+                //     eye_center,
+                //     5,
+                //     Scalar::new(255f64, 255f64, 255f64, 255f64),
+                //     1,
+                //     8,
+                //     0
+                // )?;
+                // println!("eye center: {:#?}", eye_center);
+
+
+
             }
         }
 
@@ -171,9 +196,28 @@ fn detect_faces (frame : &Mat,
     Ok (faces)
 }
 
+// https://github.com/trishume/eyeLike/blob/master/src/main.cpp#L107
 fn detect_eyes (frame : &Mat,
                 eyes_model : &mut objdetect::CascadeClassifier)
                 -> opencv::Result<types::VectorOfRect> {
+
+    // let mut frame_smoothed = Mat::new_rows_cols_with_default(frame.rows (),
+    //                                                      frame.cols (),
+    //                                                      frame.typ ()?,
+    //                                                      Scalar::all(.0))?;
+
+    // let sigma = K_SMOOTH_FACE_FACTOR * frame.width;
+    // imgproc::gaussian_blur(
+    //     &frame, //src: &dyn ToInputArray,
+    //     &mut frame_smoothed, //dst: &mut dyn ToOutputArray,
+    //     core::Size {
+    //         width: 0,
+    //         height: 0
+    //     }, //ksize: Size,
+    //     sigma, //: f64,
+    //     sigma,// f64,
+    //     border_type: i32
+    // );
 
     let mut eyes = types::VectorOfRect::new();
 

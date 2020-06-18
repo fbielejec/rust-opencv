@@ -12,19 +12,27 @@ use {
     // utils
 };
 
+// TODO : coll of rects
+fn move_eye_center (point: &Point, face: &Rect, eye: &Rect)
+                    -> opencv::Result<Point> {
+    Ok (Point::new (face.tl ().x
+                    + eye.tl ().x
+                    + point.x as i32,
+                    face.tl ().y
+                    + eye.tl ().y
+                    + point.y as i32))
+}
+
 /*
  * Track pupils movements
  * Move cursor
  */
 pub fn run () -> opencv::Result<()> {
-
-    // const K_SMOOTH_FACE_FACTOR: f64 = 0.005;
-
     let face_detector_name : &str = "/opt/opencv/opencv-4.2.0/data/haarcascades/haarcascade_frontalface_alt.xml";
     let eyes_detector_name : &str = "/opt/opencv/opencv-4.2.0/data/haarcascades/haarcascade_eye_tree_eyeglasses.xml";
+    let camera_window_name = "camera";
 
-    let window_name = "camera";
-    highgui::named_window(window_name, 1)?;
+    highgui::named_window(camera_window_name, highgui::WINDOW_AUTOSIZE)?;
 
     let (face_features, eyes_features, mut cam) = {
         (
@@ -46,16 +54,7 @@ pub fn run () -> opencv::Result<()> {
         let mut frame = Mat::default()?;
         cam.read(&mut frame)?;
 
-        // let mut rgb_channels = types::VectorOfMat::new ();
-        // core::split (&frame, &mut rgb_channels);
-
-        // println!("frame: {:#?}", frame);
-        // println!("rgb: {:#?}", rgb_channels .get (2)?);
-
         let enhanced_frame = enhance_frame (&frame)?;
-
-        // println!("enhanced frame : {:#?}", enhanced_frame);
-
         let faces = detect_faces (&enhanced_frame,
                                   &mut face_detector_model)?;
 
@@ -68,10 +67,9 @@ pub fn run () -> opencv::Result<()> {
                                     &mut eyes_detector_model)?;
 
             if eyes.len () == 2 {
-                // println!("eyes detected: {:?} {:#?}", eyes.get (0)?.x, eyes.get (1)?);
-
                 let face = faces.get (0)?;
 
+                // draw eyes
                 for eye in eyes.iter () {
                     imgproc::rectangle(
                         &mut frame,
@@ -88,62 +86,38 @@ pub fn run () -> opencv::Result<()> {
                     )?;
                 }
 
-                let left_eye_region = Mat::roi (&face_region, eyes.get (0)?)?;
-                // highgui::imshow("DEBUG", &left_eye_region)?;
+                let left_eye = eyes.get (0)?;
+                let left_eye_region = Mat::roi (&face_region, left_eye)?;
+                let left_eye_center : Point = timm_barth::find_eye_center (&left_eye_region)?;
+                let left_eye_center_moved = move_eye_center (&left_eye_center, &face, &left_eye)?;
 
-                // TODO: detects n circles, select iris
-                let iris = detect_iris (&left_eye_region)?;
-                // TODO : stabilize (n means)
+                let right_eye = eyes.get (1)?;
+                let right_eye_region = Mat::roi (&face_region, right_eye)?;
+                let right_eye_center : Point = timm_barth::find_eye_center (&right_eye_region)?;
+                let right_eye_center_moved = move_eye_center (&right_eye_center, &face, &right_eye)?;
 
-                if iris.len () > 0 {
-                    // println!("iris detected: n: {} {:#?}", iris.len (), iris.get (0)?);
+                imgproc::circle(
+                    &mut frame,
+                    left_eye_center_moved,
+                    1,
+                    Scalar::new(0f64, 0f64, 255f64, 0f64),
+                    1,
+                    8,
+                    0)?;
 
-                    let eye = eyes.get (0)?;
-                    let face = faces.get (0)?;
-
-                    for ir in iris {
-                        imgproc::circle(
-                            &mut frame,
-                            Point::new (face.tl ().x
-                                        + eye.tl ().x
-                                        + ir.x as i32,
-                                        face.tl ().y
-                                        + eye.tl ().y
-                                        + ir.y as i32),
-                            ir.z as i32,
-                            Scalar::new(0f64, 0f64, 255f64, 0f64),
-                            1,
-                            8,
-                            0
-                        )?;
-                    }
-
-                    // let params = types::VectorOfi32::new ();
-                    // imgcodecs::imwrite ("/home/filip/iris.png",
-                    //                     &mut frame,
-                    //                     &params);
-
-                }
-
-                // TODO
-                let eye_center = timm_barth::find_eye_center (&left_eye_region)?;
-                // imgproc::circle(
-                //     &mut frame,
-                //     eye_center,
-                //     5,
-                //     Scalar::new(255f64, 255f64, 255f64, 255f64),
-                //     1,
-                //     8,
-                //     0
-                // )?;
-                // println!("eye center: {:#?}", eye_center);
-
-
+                imgproc::circle(
+                    &mut frame,
+                    right_eye_center_moved,
+                    1,
+                    Scalar::new(0f64, 0f64, 255f64, 0f64),
+                    1,
+                    8,
+                    0)?;
 
             }
         }
 
-        highgui::imshow(window_name, &frame)?;
+        highgui::imshow(camera_window_name, &frame)?;
         if highgui::wait_key(10)? > 0 {
             break;
         }
@@ -170,7 +144,6 @@ fn enhance_frame (frame : &Mat)
     Ok(equalized)
 }
 
-
 fn detect_faces (frame : &Mat,
                  face_model : &mut objdetect::CascadeClassifier)
                  -> opencv::Result<types::VectorOfRect> {
@@ -196,7 +169,6 @@ fn detect_faces (frame : &Mat,
     Ok (faces)
 }
 
-// https://github.com/trishume/eyeLike/blob/master/src/main.cpp#L107
 fn detect_eyes (frame : &Mat,
                 eyes_model : &mut objdetect::CascadeClassifier)
                 -> opencv::Result<types::VectorOfRect> {
@@ -240,27 +212,25 @@ fn detect_eyes (frame : &Mat,
     Ok(eyes)
 }
 
-fn detect_iris (frame : &Mat)
-                -> opencv::Result<types::VectorOfPoint3f> {
+// fn detect_iris (frame : &Mat)
+//                 -> opencv::Result<types::VectorOfPoint3f> {
 
-    // println!("@@@ detect_iris {:#?}", frame);
+//     // collection of (x,y, radius)
+//     let mut circles = types::VectorOfPoint3f::new();
 
-    // collection of (x,y, radius)
-    let mut circles = types::VectorOfPoint3f::new();
+//     imgproc::hough_circles(
+//         &frame,
+//         &mut circles,
+//         imgproc::HOUGH_GRADIENT, // method
+//         1.0, // dp, inverse ratio of the accumulator resolution
+//         frame.cols () as f64 / 8.0, // min_dist between the center of one circle and another
+//         250.0, //  threshold of the edge detector
+//         5.0, // min_area of a circle in the image
+//         // 0,
+//         // 0
+//         frame.rows () / 16, // min_radius of a circle in the image
+//         frame.rows () / 4 // max_radius of a circle in the image
+//     )?;
 
-    imgproc::hough_circles(
-        &frame,
-        &mut circles,
-        imgproc::HOUGH_GRADIENT, // method
-        1.0, // dp, inverse ratio of the accumulator resolution
-        frame.cols () as f64 / 8.0, // min_dist between the center of one circle and another
-        250.0, //  threshold of the edge detector
-        5.0, // min_area of a circle in the image
-        // 0,
-        // 0
-        frame.rows () / 16, // min_radius of a circle in the image
-        frame.rows () / 4 // max_radius of a circle in the image
-    )?;
-
-    Ok (circles)
-}
+//     Ok (circles)
+// }

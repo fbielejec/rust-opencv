@@ -88,12 +88,12 @@ pub fn run () -> opencv::Result<()> {
 
                 let left_eye = eyes.get (0)?;
                 let left_eye_region = Mat::roi (&face_region, left_eye)?;
-                let left_eye_center : Point = timm_barth::find_eye_center (&left_eye_region)?;
+                let left_eye_center = timm_barth::find_eye_center (&left_eye_region, left_eye.width)?;
                 let left_eye_center_moved = move_eye_center (&left_eye_center, &face, &left_eye)?;
 
                 let right_eye = eyes.get (1)?;
                 let right_eye_region = Mat::roi (&face_region, right_eye)?;
-                let right_eye_center : Point = timm_barth::find_eye_center (&right_eye_region)?;
+                let right_eye_center = timm_barth::find_eye_center (&right_eye_region, right_eye.width)?;
                 let right_eye_center_moved = move_eye_center (&right_eye_center, &face, &right_eye)?;
 
                 imgproc::circle(
@@ -128,8 +128,9 @@ pub fn run () -> opencv::Result<()> {
 
 fn enhance_frame (frame : &Mat)
                   -> opencv::Result<Mat>{
-
     let mut gray = Mat::default()?;
+    let mut equalized = Mat::default()?;
+
     imgproc::cvt_color(
         &frame,
         &mut gray,
@@ -137,7 +138,6 @@ fn enhance_frame (frame : &Mat)
         0
     )?;
 
-    let mut equalized = Mat::default()?;
     imgproc::equalize_hist (&gray,
                             &mut equalized)?;
 
@@ -147,7 +147,6 @@ fn enhance_frame (frame : &Mat)
 fn detect_faces (frame : &Mat,
                  face_model : &mut objdetect::CascadeClassifier)
                  -> opencv::Result<types::VectorOfRect> {
-
     let mut faces = types::VectorOfRect::new();
 
     face_model.detect_multi_scale(

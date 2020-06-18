@@ -1,10 +1,9 @@
 use {
-    // std::cmp,
     opencv:: {
         imgproc,
         highgui,
         prelude::*,
-        core::{self, Point, Scalar, CV_32F, CV_64F, Rect}
+        core::{self, Point, Scalar, CV_64F, Rect}
     }
 };
 
@@ -55,7 +54,14 @@ fn compute_dynamic_threshold(mat: &Mat, std_dev_factor: f64)
     Ok (std_dev_factor * std_dev + mean)
 }
 
-// TODO : test
+fn unscale_point(p: &Point, width: i32)
+                 -> opencv::Result<Point> {
+    let ratio: f64 = K_FAST_EYE_WIDTH as f64 / width as f64;
+    let x: i32 = (p.x as f64 / ratio) .round () as i32;
+    let y: i32 = (p.y as f64 / ratio) .round () as i32;
+    Ok (Point::new (x, y))
+}
+
 fn test_possible_centers_formula (x: i32, y: i32, weight: &Mat, gx: f64, gy: f64, out: &mut Mat)
                                   -> opencv::Result<()> {
     // for all possible centers
@@ -100,26 +106,21 @@ fn test_possible_centers_formula (x: i32, y: i32, weight: &Mat, gx: f64, gy: f64
 
 fn scale_to_fast_size(src: &Mat, mut dst: &mut Mat)
                       -> opencv::Result<()> {
-
-    // println!("src {:#?}", src);
-    // println!("scale {}", (K_FAST_EYE_WIDTH / src.cols ()) * src.rows ());
-
-    imgproc::resize(
-        &src,
-        &mut dst,
-        core::Size {
-            width: K_FAST_EYE_WIDTH,
-            height: K_FAST_EYE_WIDTH //(K_FAST_EYE_WIDTH / src.cols ()) * src.rows ()
-        },
-        0.0,
-        0.0,
-        imgproc::INTER_LINEAR
-    )?;
+    imgproc::resize(&src,
+                    &mut dst,
+                    core::Size {
+                        width: K_FAST_EYE_WIDTH,
+                        height: K_FAST_EYE_WIDTH
+                        // height: (K_FAST_EYE_WIDTH / src.cols ()) * src.rows ()
+                    },
+                    0.0,
+                    0.0,
+                    imgproc::INTER_LINEAR)?;
 
     Ok (())
 }
 
-pub fn find_eye_center (frame : &Mat)
+pub fn find_eye_center (frame : &Mat, frame_width: i32)
                         -> opencv::Result<Point> {
 
     let mut eye_region = Mat::default ()?;
@@ -255,7 +256,7 @@ pub fn find_eye_center (frame : &Mat)
 
     // TODO
     if K_ENABLE_POST_PROCESS {
-    // flood fill the edges
+        // flood fill the edges
 
         // let mut flood_clone : Mat = Mat::default ()?;
         // let flood_threshold : f64 = max_value * K_POST_PROCESS_THRESHOLD;
@@ -268,8 +269,7 @@ pub fn find_eye_center (frame : &Mat)
 
     }
 
-    // let max_point = Point::new (1,1);
-    Ok (max_point)
+    Ok (unscale_point (&max_point, frame_width)?)
 }
 
 // TODO

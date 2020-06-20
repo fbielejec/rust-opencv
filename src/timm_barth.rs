@@ -1,4 +1,5 @@
 use {
+    std::collections::{VecDeque},
     opencv:: {
         imgproc,
         highgui,
@@ -122,7 +123,6 @@ fn scale_to_fast_size(src: &Mat, mut dst: &mut Mat)
 
 pub fn find_eye_center (frame : &Mat, frame_width: i32)
                         -> opencv::Result<Point> {
-
     let mut eye_region = Mat::default ()?;
     scale_to_fast_size (&frame, &mut eye_region)?;
 
@@ -200,6 +200,7 @@ pub fn find_eye_center (frame : &Mat, frame_width: i32)
         let ncols = weights.cols();
         let row = weights.at_row_mut::<u8>(y)?;
         for x in 0..ncols as usize {
+            // dark centres are more likely than bright centres
             row[x] = 255u8 - row[x];
         }
     }
@@ -254,46 +255,73 @@ pub fn find_eye_center (frame : &Mat, frame_width: i32)
         &core::no_array ()?
     )?;
 
-    // TODO
+    // TODO : test
     if K_ENABLE_POST_PROCESS {
         // flood fill the edges
+        let mut flood_clone : Mat = Mat::default ()?;
+        let flood_threshold : f64 = max_value * K_POST_PROCESS_THRESHOLD;
+        imgproc::threshold(&out, &mut flood_clone, flood_threshold, 0.0f64, imgproc::THRESH_TOZERO)?;
 
-        // let mut flood_clone : Mat = Mat::default ()?;
-        // let flood_threshold : f64 = max_value * K_POST_PROCESS_THRESHOLD;
+        let mask = flood_kill_edges (&mut flood_clone)?;
 
-        // imgproc::threshold(&out, &mut flood_clone, flood_threshold, 0.0f64, imgproc::THRESH_TOZERO)?;
+        highgui::imshow("DEBUG", &out)?;
+        // highgui::imshow("DEBUG", &mask)?;
 
-        // // highgui::imshow("DEBUG", &out)?;
-
-        // let mask = flood_kill_edges (&mut flood_clone)?;
-
+        core::min_max_loc(
+            &out,
+            &mut 0.0, // NULL,
+            &mut max_value,
+            &mut Point::default (), // NULL,
+            &mut max_point,
+            &mask)?;
     }
 
     Ok (unscale_point (&max_point, frame_width)?)
 }
 
-// TODO
+fn is_point_in_mat (p: &Point, mat: &Mat)
+                    -> opencv::Result<bool> {
+    Ok (p.x >= 0 && p.x < mat.cols () && p.y >= 0 && p.y < mat.rows ())
+}
+
+// TODO: test
 fn flood_kill_edges (mat: &mut Mat)
-                     -> opencv::Result<()> {
+                     -> opencv::Result<Mat> {
+    let mut mask = Mat::new_rows_cols_with_default(mat.rows (),
+                                                   mat.cols (),
+                                                   u8::typ () ,
+                                                   // start with all values 255
+                                                   Scalar::all (255f64))?;
 
-    let ncols = mat.cols ();
-    let nrows = mat.rows ();
+    let mut queue: VecDeque<Point> = VecDeque::new();
+    queue.push_back (Point::new (0, 0));
 
-    // let mut m = mat.clone ()?;
-    // imgproc::rectangle(
-    //     &mut m,
-    //     Rect::new (
-    //         0,
-    //         0,
-    //         ncols,
-    //         nrows
-    //     ),
-    //     core::Scalar::new(255f64, 0f64, 0f64, 0f64),
-    //     1,
-    //     8,
-    //     0
-    // )?;
+    while !queue.is_empty () {
+        let p: Point = queue.pop_front ().unwrap ();
+        if mat.at_pt::<f64>(p)? == &0.0f64 {
+            continue;
+        }
 
+        // add in every direction
+        let mut np = Point::new (p.x + 1, p.y); // right
+        if is_point_in_mat(&np, &mat)? {
+            queue.push_back (np);
+        }
 
-    Ok (())
+        np.x = p.x - 1; np.y = p.y; // left
+        if is_point_in_mat(&np, &mat)? {
+            queue.push_back (np);
+        }
+
+        np.x = p.x; np.y = p.y - 1; // up
+        if is_point_in_mat(&np, &mat)? {
+            queue.push_back (np);
+        }
+
+        // kill it
+        *mat.at_pt_mut::<f64> (p)? = 0.0f64;
+        *mask.at_pt_mut::<u8> (p)? = 0;
+    }
+
+    Ok (mask)
 }

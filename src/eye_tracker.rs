@@ -61,13 +61,28 @@ pub fn run () -> opencv::Result<()> {
         if faces.len () > 0 {
             // region of interest (submatrix), first detected face
             let face_region = Mat::roi (&enhanced_frame, faces.get (0)?)?;
+            let face = faces.get (0)?;
+
+            imgproc::rectangle(
+                &mut frame,
+                Rect::new (
+                    face.tl ().x,
+                    face.tl ().y,
+                    face.width,
+                    face.height
+                ), // eye
+                core::Scalar::new(0f64, -1f64, -1f64, -1f64),
+                1, // thickness
+                8, // line type
+                0 // shift
+            )?;
 
             // detect eyes
             let eyes = detect_eyes (&face_region,
                                     &mut eyes_detector_model)?;
 
             if eyes.len () == 2 {
-                let face = faces.get (0)?;
+                // let face = faces.get (0)?;
 
                 // draw eyes
                 for eye in eyes.iter () {

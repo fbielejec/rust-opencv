@@ -1,7 +1,8 @@
 extern crate opencv;
-// use std::io;
+extern crate enigo;
 
 mod utils;
+mod mouse;
 mod mat_the_basic_image_container;
 mod how_to_scan_images;
 mod mat_mask_operations;

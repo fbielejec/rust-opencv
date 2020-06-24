@@ -16,27 +16,6 @@ const K_POST_PROCESS_THRESHOLD: f64 = 0.97;
 const K_ENABLE_POST_PROCESS: bool = true;
 const K_FAST_EYE_WIDTH: i32 = 50;
 
-fn mat_gradient(mat: &Mat)
-                -> opencv::Result<Mat> {
-    let mut out = Mat::new_rows_cols_with_default(mat.rows (),
-                                                  mat.cols (),
-                                                  f64::typ (),
-                                                  Scalar::default ())?;
-
-    for y in 0..mat.rows() {
-        let out_row = out.at_row_mut::<f64>(y)?;
-        let mat_row = mat.at_row::<u8>(y)?;
-
-        out_row [0] = mat_row [1] as f64 - mat_row [0] as f64;
-        for x in 1..mat.cols() - 1  {
-            out_row[x as usize] = (mat_row [(x + 1) as usize] as f64 - mat_row [(x - 1) as usize] as f64) / 2.0;
-        }
-        out_row[(mat.cols() - 1) as usize ] = mat_row [(mat.cols() - 1) as usize] as f64 - mat_row [(mat.cols() - 2) as usize] as f64;
-    }
-
-    Ok (out)
-}
-
 fn compute_dynamic_threshold(mat: &Mat, std_dev_factor: f64)
                              -> opencv::Result<f64> {
     let mut mean_magnitude_grad = Mat::default ()?;
@@ -55,21 +34,16 @@ fn compute_dynamic_threshold(mat: &Mat, std_dev_factor: f64)
     Ok (std_dev_factor * std_dev + mean)
 }
 
-fn unscale_point(p: &Point, width: i32)
-                 -> opencv::Result<Point> {
-    let ratio: f64 = K_FAST_EYE_WIDTH as f64 / width as f64;
-    let x: i32 = (p.x as f64 / ratio) .round () as i32;
-    let y: i32 = (p.y as f64 / ratio) .round () as i32;
-    Ok (Point::new (x, y))
-}
-
-fn test_possible_centers_formula (x: i32, y: i32, weight: &Mat, gx: f64, gy: f64, out: &mut Mat)
+/*
+ * Eq 3 from Timm and Barth
+ */
+fn compute_possible_center (x: i32, y: i32, weights: &Mat, gx: f64, gy: f64, out: &mut Mat)
                                   -> opencv::Result<()> {
     // for all possible centers
     for cy in 0..out.rows()  {
         let ncol = out.cols();
         let out_row = out.at_row_mut::<f64>(cy)?;
-        let weight_row = weight.at_row::<u8>(cy)?;
+        let weight_row = weights.at_row::<u8>(cy)?;
 
         for cx in 0..ncol {
 
@@ -77,7 +51,7 @@ fn test_possible_centers_formula (x: i32, y: i32, weight: &Mat, gx: f64, gy: f64
                 continue;
             }
 
-            // create a vector from the possible center to the gradient origin
+            // displacement vector d from the possible center to the gradient origin
             let mut dx: f64 = x as f64 - cx as f64;
             let mut dy: f64 = y as f64 - cy as f64;
             // normalize d
@@ -105,8 +79,25 @@ fn test_possible_centers_formula (x: i32, y: i32, weight: &Mat, gx: f64, gy: f64
     Ok (())
 }
 
-fn scale_to_fast_size(src: &Mat, mut dst: &mut Mat)
-                      -> opencv::Result<()> {
+/*
+ * unscale point, complements scale_matrix
+ */
+fn unscale_point(p: &Point, width: i32)
+                 -> opencv::Result<Point> {
+    let ratio: f64 = K_FAST_EYE_WIDTH as f64 / width as f64;
+    let x: i32 = (p.x as f64 / ratio) .round () as i32;
+    let y: i32 = (p.y as f64 / ratio) .round () as i32;
+    Ok (Point::new (x, y))
+}
+
+/*
+ * scales image to fast size
+ */
+fn scale_matrix(src: &Mat)
+                -> opencv::Result<Mat> {
+
+    let mut dst = Mat::default ()?;
+
     imgproc::resize(&src,
                     &mut dst,
                     core::Size {
@@ -118,23 +109,50 @@ fn scale_to_fast_size(src: &Mat, mut dst: &mut Mat)
                     0.0,
                     imgproc::INTER_LINEAR)?;
 
-    Ok (())
+    Ok (dst)
+}
+
+/*
+ * Matlab implementation of image gradient by finite differences.
+ * At the borders, it is a forward difference: grad(1) = row(2) - row(1).
+ * For interior rows it is computed by the central difference: grad(2) = (row(3) - row(1)) / 2.
+ */
+fn matrix_gradient(mat: &Mat)
+                   -> opencv::Result<Mat> {
+    let mut out = Mat::new_rows_cols_with_default(mat.rows (),
+                                                  mat.cols (),
+                                                  f64::typ (),
+                                                  Scalar::default ())?;
+
+    for y in 0..mat.rows() {
+        let out_row = out.at_row_mut::<f64>(y)?;
+        let mat_row = mat.at_row::<u8>(y)?;
+
+        out_row [0] = mat_row [1] as f64 - mat_row [0] as f64;
+        for x in 1..mat.cols() - 1
+        {
+            out_row[x as usize] = (mat_row [(x + 1) as usize] as f64 - mat_row [(x - 1) as usize] as f64) / 2.0;
+        }
+        out_row[(mat.cols() - 1) as usize] = mat_row [(mat.cols() - 1) as usize] as f64 - mat_row [(mat.cols() - 2) as usize] as f64;
+    }
+
+    Ok (out)
 }
 
 pub fn find_eye_center (frame : &Mat, frame_width: i32)
                         -> opencv::Result<Point> {
-    let mut eye_region = Mat::default ()?;
-    scale_to_fast_size (&frame, &mut eye_region)?;
+
+    let eye_region = scale_matrix (&frame)?;
 
     //-- Find the gradient
-    let mut gradient_x : Mat = mat_gradient (&eye_region)?;
+    let mut gradient_x : Mat = matrix_gradient (&eye_region)?;
     let mut gradient_y = Mat::new_rows_cols_with_default(eye_region.rows (),
                                                          eye_region.cols (),
                                                          f64::typ (),
                                                          Scalar::default ())?;
 
     core::transpose (&eye_region, &mut gradient_y)?;
-    gradient_y = mat_gradient (&gradient_y)?;
+    gradient_y = matrix_gradient (&gradient_y)?;
     core::transpose (&gradient_y.clone ()?, &mut gradient_y)?;
 
     // highgui::imshow("DEBUG1", &gradient_x)?;
@@ -155,7 +173,7 @@ pub fn find_eye_center (frame : &Mat, frame_width: i32)
 
     // println!("threshold {}", gradient_threshold);
 
-    // normalize
+    // normalize gradients, ignore ones below the threshold
     for y in 0..eye_region.rows() {
         let x_row = gradient_x.at_row_mut::<f64>(y)?;
         let y_row = gradient_y.at_row_mut::<f64>(y)?;
@@ -179,9 +197,8 @@ pub fn find_eye_center (frame : &Mat, frame_width: i32)
     // highgui::imshow("DEBUG2", &gradient_y)?;
     // highgui::move_window("DEBUG2", 10, 800);
 
-    // create a blurred and inverted image for weighting
+    // create a smoothed and inverted image for weighting
     let mut weights = Mat::default ()?;
-
     imgproc::gaussian_blur(
         &eye_region,
         &mut weights,
@@ -229,7 +246,7 @@ pub fn find_eye_center (frame : &Mat, frame_width: i32)
             if g_x == 0.0 && g_y == 0.0 {
                 continue;
             }
-            test_possible_centers_formula(x as i32, y as i32, &weights, g_x, g_y, &mut out_sum)?;
+            compute_possible_center(x as i32, y as i32, &weights, g_x, g_y, &mut out_sum)?;
         }
     }
 
@@ -264,7 +281,7 @@ pub fn find_eye_center (frame : &Mat, frame_width: i32)
 
         let mask = flood_kill_edges (&mut flood_clone)?;
 
-        highgui::imshow("DEBUG", &out)?;
+        // highgui::imshow("DEBUG", &out)?;
         // highgui::imshow("DEBUG", &mask)?;
 
         core::min_max_loc(
@@ -284,7 +301,7 @@ fn is_point_in_mat (p: &Point, mat: &Mat)
     Ok (p.x >= 0 && p.x < mat.cols () && p.y >= 0 && p.y < mat.rows ())
 }
 
-// TODO: test
+// TODO: remove mutability
 fn flood_kill_edges (mat: &mut Mat)
                      -> opencv::Result<Mat> {
     let mut mask = Mat::new_rows_cols_with_default(mat.rows (),

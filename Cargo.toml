@@ -5,3 +5,4 @@ authors = ["filip <fbielejec@gmail.com>"]
 
 [dependencies]
 opencv = {version = "0.33", features = ["contrib"]}
+enigo = "0.0.14"

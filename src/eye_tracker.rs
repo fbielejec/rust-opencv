@@ -8,8 +8,8 @@ use {
         videoio,
         highgui
     },
+    enigo::{self, Enigo},
     timm_barth
-    // utils
 };
 
 // TODO : coll of rects
@@ -48,6 +48,8 @@ pub fn run () -> opencv::Result<()> {
 
     let mut face_detector_model : objdetect::CascadeClassifier = objdetect::CascadeClassifier::new(&face_features)?;
     let mut eyes_detector_model : objdetect::CascadeClassifier = objdetect::CascadeClassifier::new(&eyes_features)?;
+
+    let mut enigo: Enigo = Enigo::new();
 
     loop {
 
@@ -129,6 +131,8 @@ pub fn run () -> opencv::Result<()> {
                     8,
                     0)?;
 
+                move_mouse (&mut enigo, &frame, &left_eye_center_moved);
+
             }
         }
 
@@ -187,24 +191,6 @@ fn detect_eyes (frame : &Mat,
                 eyes_model : &mut objdetect::CascadeClassifier)
                 -> opencv::Result<types::VectorOfRect> {
 
-    // let mut frame_smoothed = Mat::new_rows_cols_with_default(frame.rows (),
-    //                                                      frame.cols (),
-    //                                                      frame.typ ()?,
-    //                                                      Scalar::all(.0))?;
-
-    // let sigma = K_SMOOTH_FACE_FACTOR * frame.width;
-    // imgproc::gaussian_blur(
-    //     &frame, //src: &dyn ToInputArray,
-    //     &mut frame_smoothed, //dst: &mut dyn ToOutputArray,
-    //     core::Size {
-    //         width: 0,
-    //         height: 0
-    //     }, //ksize: Size,
-    //     sigma, //: f64,
-    //     sigma,// f64,
-    //     border_type: i32
-    // );
-
     let mut eyes = types::VectorOfRect::new();
 
     eyes_model.detect_multi_scale(
@@ -226,25 +212,33 @@ fn detect_eyes (frame : &Mat,
     Ok(eyes)
 }
 
-// fn detect_iris (frame : &Mat)
-//                 -> opencv::Result<types::VectorOfPoint3f> {
+ // TODO : translate to display size
+fn move_mouse (enigo: &mut enigo::MouseControllable, frame: &Mat, location: &Point) {
 
-//     // collection of (x,y, radius)
-//     let mut circles = types::VectorOfPoint3f::new();
+    let (mut x, mut y, nrows, ncols) = {
+        (location.x,
+         location.y,
+         frame.rows (),
+         frame.rows ())
+    };
 
-//     imgproc::hough_circles(
-//         &frame,
-//         &mut circles,
-//         imgproc::HOUGH_GRADIENT, // method
-//         1.0, // dp, inverse ratio of the accumulator resolution
-//         frame.cols () as f64 / 8.0, // min_dist between the center of one circle and another
-//         250.0, //  threshold of the edge detector
-//         5.0, // min_area of a circle in the image
-//         // 0,
-//         // 0
-//         frame.rows () / 16, // min_radius of a circle in the image
-//         frame.rows () / 4 // max_radius of a circle in the image
-//     )?;
+    if x > ncols {
+        x = ncols;
+    }
 
-//     Ok (circles)
-// }
+    if x < 0 {
+        x = 0;
+    }
+
+    if y > nrows  {
+        y = nrows;
+    }
+
+    if y < 0 {
+        y = 0;
+    }
+
+    println!("moving to c: {} y: {}", x, y);
+
+    enigo.mouse_move_to((1080 + x), y);
+}

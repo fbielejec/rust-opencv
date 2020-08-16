@@ -2,7 +2,7 @@ extern crate opencv;
 extern crate enigo;
 
 mod utils;
-mod mouse;
+// mod mouse;
 mod mat_the_basic_image_container;
 mod how_to_scan_images;
 mod mat_mask_operations;
@@ -11,6 +11,7 @@ mod video_input;
 mod cascade_classifier;
 mod timm_barth;
 mod eye_tracker;
+mod watermark_detect;
 
 fn main() {
 
@@ -23,10 +24,12 @@ fn main() {
     println!("4) mat_operations");
     println!("5) video_input");
     println!("6) cascade_classifier");
+    println!("7) eye_tracker");
+    println!("8) watermark_detect");
 
     // io::stdin().read_line(&mut input).expect ("Failed to read the line");
 
-    let number: u32 = 7;
+    let number: u32 = 8;
     // match input.trim().parse() {
     //     Ok(num) => num,
     //     Err(_) => panic!("Aaaa!!!"),
@@ -40,6 +43,7 @@ fn main() {
         5 => video_input::run ().expect("Runtime error"),
         6 => cascade_classifier::run ().expect("Runtime error"),
         7 => eye_tracker::run ().expect("Runtime error"),
+        8 => watermark_detect::run ().expect("Runtime error"),
 
         _ => println!("meh"),
     }

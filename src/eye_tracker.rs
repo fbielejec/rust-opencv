@@ -9,6 +9,7 @@ use {
         highgui
     },
     enigo::{self, Enigo},
+    utils::{enhance_frame},
     timm_barth
 };
 
@@ -145,23 +146,23 @@ pub fn run () -> opencv::Result<()> {
     Ok(())
 }
 
-fn enhance_frame (frame : &Mat)
-                  -> opencv::Result<Mat>{
-    let mut gray = Mat::default()?;
-    let mut equalized = Mat::default()?;
+// fn enhance_frame (frame : &Mat)
+//                   -> opencv::Result<Mat>{
+//     let mut gray = Mat::default()?;
+//     let mut equalized = Mat::default()?;
 
-    imgproc::cvt_color(
-        &frame,
-        &mut gray,
-        imgproc::COLOR_BGR2GRAY,
-        0
-    )?;
+//     imgproc::cvt_color(
+//         &frame,
+//         &mut gray,
+//         imgproc::COLOR_BGR2GRAY,
+//         0
+//     )?;
 
-    imgproc::equalize_hist (&gray,
-                            &mut equalized)?;
+//     imgproc::equalize_hist (&gray,
+//                             &mut equalized)?;
 
-    Ok(equalized)
-}
+//     Ok(equalized)
+// }
 
 fn detect_faces (frame : &Mat,
                  face_model : &mut objdetect::CascadeClassifier)

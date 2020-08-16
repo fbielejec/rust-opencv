@@ -35,7 +35,7 @@ pub fn run () -> opencv::Result<()> {
         capture_reference.read(&mut frame_reference)?;
         capture_test.read(&mut frame_test)?;
 
-        if utils::empty(&frame_reference)? || utils::empty(&frame_test)?  {
+        if utils::empty(&frame_reference)? || utils::empty(&frame_test)? {
             println!("No more video frames to read");
             break;
         }
